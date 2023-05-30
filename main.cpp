@@ -46,7 +46,7 @@ int main()
 
     // glfw window creation
     // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Paint.exe con clase", NULL, NULL);
     if (window == NULL)
     {
         std::cout << "Failed to create GLFW window" << std::endl;
@@ -192,11 +192,22 @@ int main()
         // world transformation
         glm::mat4 model = glm::mat4(1.0f);
         lightingShader.setMat4("model", model);
+        unsigned int transformLoc = glGetUniformLocation(lightingShader.ID, "transform");
 
         // render the cube
-        glBindVertexArray(cubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
+        for (int i = 0; i < 7; ++i) {
+            // create transformations
+            glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
+            transform = glm::scale(transform, glm::vec3(0.3f));
+            transform = glm::translate(transform, glm::vec3(0.3f + double(i), -0.2f+ + double(i), 0.3f));
 
+            // get matrix's uniform location and set matrix
+            lightingShader.setMat4("model", transform);
+
+            // render container
+            glBindVertexArray(cubeVAO);
+            glDrawArrays(GL_TRIANGLES, 0, 36);
+        }
 
         // also draw the lamp object
         lightCubeShader.use();
