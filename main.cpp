@@ -1,13 +1,16 @@
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
-#include "include/stb_image.h"
 #include "include/glm/glm.hpp"
 #include "include/glm/gtc/matrix_transform.hpp"
 #include "include/glm/gtc/type_ptr.hpp"
+
+//#include <learnopengl/filesystem.h>
 #include "include/shader_s.h"
-#include "include/filesystem.h"
 #include "include/Camara.h"
+#include "Objecto.h"
+#include "gly_ply.h"
 #include <iostream>
+using namespace std;
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -19,7 +22,7 @@ const unsigned int SCR_WIDTH = 800;
 const unsigned int SCR_HEIGHT = 600;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 40.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -27,14 +30,22 @@ bool firstMouse = true;
 // timing
 float deltaTime = 0.0f;
 float lastFrame = 0.0f;
+float tiempoInicial = 0.0f, tiempoTranscurrido = 0.0f;
 
 // lighting
 glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
 
-int main()
-{
+
+
+//Esfera esfera(vec3(0),2., 100, 100);
+Objeto *pEsfera = new Esfera(vec3(0),2, 50, 50);
+
+Model_PLY modelo;
+int main() {
+    char *archivo = "../resources/models/bunny.ply";
+    modelo.Load(archivo);
+
     // glfw: initialize and configure
-    // ------------------------------
     glfwInit();
     glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
@@ -45,10 +56,8 @@ int main()
 #endif
 
     // glfw window creation
-    // --------------------
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "Paint.exe con clase", NULL, NULL);
-    if (window == NULL)
-    {
+    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    if (window == NULL)     {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
@@ -57,122 +66,36 @@ int main()
     glfwSetFramebufferSizeCallback(window, framebuffer_size_callback);
     glfwSetCursorPosCallback(window, mouse_callback);
     glfwSetScrollCallback(window, scroll_callback);
-
     // tell GLFW to capture our mouse
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // glad: load all OpenGL function pointers
-    // ---------------------------------------
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))
-    {
+    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))     {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
 
     // configure global opengl state
-    // -----------------------------
     glEnable(GL_DEPTH_TEST);
 
-    // build and compile our shader zprogram
-    // ------------------------------------
+    // build and compile our shader program
     Shader lightingShader("../resources/shaders/2.1.basic_lighting.vs", "../resources/shaders/2.1.basic_lighting.fs");
-    Shader lightCubeShader("../resources/shaders/2.1.light_cube.vs", "../resources/shaders/2.1.light_cube.fs");
+    //Shader lightCubeShader("../2.2.light_cube.vs", "../2.2.light_cube.fs");
 
-    // set up vertex data (and buffer(s)) and configure vertex attributes
-    // ------------------------------------------------------------------
-    float vertices[] = {
-            // ATRAS
-//            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-//            0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-//            0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-//            0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-//            -0.5f,  0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-//            -0.5f, -0.5f, -0.5f,  0.0f,  0.0f, -1.0f,
-            // ADELANTE
-//            -0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-//            0.5f, -0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-//            0.5f,  0.5f,  0.5f,  0.0f,  0.0f,  1.0f,
-            0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-            -0.5f, 0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-            -0.5f, -0.5f, 0.5f, 0.0f, 0.0f, 1.0f,
-            // IZQUIERDA
-//            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-//            -0.5f,  0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-//            -0.5f, -0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-            -0.5f, 0.5f, -0.5f, -1.0f,  0.0f,  0.0f,
-            -0.5f, -0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-            -0.5f,  0.5f,  0.5f, -1.0f,  0.0f,  0.0f,
-            // DERECHA
-//            0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-//            0.5f,  0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-//            0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-//            0.5f, -0.5f, -0.5f,  1.0f,  0.0f,  0.0f,
-//            0.5f, -0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-//            0.5f,  0.5f,  0.5f,  1.0f,  0.0f,  0.0f,
-            // ABAJO
-//            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-//            0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-//            0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-//            0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-//            -0.5f, -0.5f,  0.5f,  0.0f, -1.0f,  0.0f,
-//            -0.5f, -0.5f, -0.5f,  0.0f, -1.0f,  0.0f,
-            // ARRIBA
-            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f,
-            -0.5f,  0.5f, 0.5f,  0.0f,  1.0f,  0.0f,
-            0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-//            0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-//            -0.5f,  0.5f,  0.5f,  0.0f,  1.0f,  0.0f,
-//            -0.5f,  0.5f, -0.5f,  0.0f,  1.0f,  0.0f
-            // QUIZA BASE
-            0.5f, 0.5f, 0.5f, -0.5f,  -0.5f,  -0.5f,
-            -0.5f, -0.5f,  0.5f, -0.5f,  -0.5f,  -0.5f,
-            -0.5f,  0.5f,  -0.5f, -0.5f,  -0.5f,  -0.5f
-    };
-    // first, configure the cube's VAO (and VBO)
-    unsigned int VBO, cubeVAO;
-    glGenVertexArrays(1, &cubeVAO);
-    glGenBuffers(1, &VBO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
-
-    glBindVertexArray(cubeVAO);
-
-    // position attribute
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-    // normal attribute
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
-    glEnableVertexAttribArray(1);
-
-
-    // second, configure the light's VAO (VBO stays the same; the vertices are the same for the light object which is also a 3D cube)
-    unsigned int lightCubeVAO;
-    glGenVertexArrays(1, &lightCubeVAO);
-    glBindVertexArray(lightCubeVAO);
-
-    glBindBuffer(GL_ARRAY_BUFFER, VBO);
-    // note that we update the lamp's position attribute's stride to reflect the updated buffer data
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
-    glEnableVertexAttribArray(0);
-
-
+    //esfera.vao = esfera.setup();
+    pEsfera->setup();
+    modelo.setup();
     // render loop
-    // -----------
-    while (!glfwWindowShouldClose(window))
-    {
+    while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
-        // --------------------
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-
+        tiempoTranscurrido = currentFrame - tiempoInicial; //static_cast<float>(glfwGetTime());
         // input
-        // -----
         processInput(window);
 
         // render
-        // ------
         glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
         glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
@@ -192,58 +115,28 @@ int main()
         // world transformation
         glm::mat4 model = glm::mat4(1.0f);
         lightingShader.setMat4("model", model);
-        unsigned int transformLoc = glGetUniformLocation(lightingShader.ID, "transform");
 
-        // render the cube
-        for (int i = 0; i < 7; ++i) {
-            // create transformations
-            glm::mat4 transform = glm::mat4(1.0f); // make sure to initialize matrix to identity matrix first
-            transform = glm::scale(transform, glm::vec3(0.3f));
-            transform = glm::translate(transform, glm::vec3(0.3f + double(i), -0.2f+ + double(i), 0.3f));
-
-            // get matrix's uniform location and set matrix
-            lightingShader.setMat4("model", transform);
-
-            // render container
-            glBindVertexArray(cubeVAO);
-            glDrawArrays(GL_TRIANGLES, 0, 36);
-        }
-
-        // also draw the lamp object
-        lightCubeShader.use();
-        lightCubeShader.setMat4("projection", projection);
-        lightCubeShader.setMat4("view", view);
-        model = glm::mat4(1.0f);
-        model = glm::translate(model, lightPos);
-        model = glm::scale(model, glm::vec3(0.2f)); // a smaller cube
-        lightCubeShader.setMat4("model", model);
-
-        glBindVertexArray(lightCubeVAO);
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-
+        //esfera.display(lightingShader);
+        pEsfera->display(lightingShader);
+        modelo.display(lightingShader);
 
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
-        // -------------------------------------------------------------------------------
         glfwSwapBuffers(window);
         glfwPollEvents();
     }
 
     // optional: de-allocate all resources once they've outlived their purpose:
-    // ------------------------------------------------------------------------
-    glDeleteVertexArrays(1, &cubeVAO);
-    glDeleteVertexArrays(1, &lightCubeVAO);
-    glDeleteBuffers(1, &VBO);
+    //   glDeleteVertexArrays(1, &cubeVAO);
+    //   glDeleteVertexArrays(1, &lightCubeVAO);
+    //   glDeleteBuffers(1, &VBO);
 
     // glfw: terminate, clearing all previously allocated GLFW resources.
-    // ------------------------------------------------------------------
     glfwTerminate();
     return 0;
 }
 
 // process all input: query GLFW whether relevant keys are pressed/released this frame and react accordingly
-// ---------------------------------------------------------------------------------------------------------
-void processInput(GLFWwindow *window)
-{
+void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
         glfwSetWindowShouldClose(window, true);
 
@@ -258,24 +151,17 @@ void processInput(GLFWwindow *window)
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
-// ---------------------------------------------------------------------------------------------
-void framebuffer_size_callback(GLFWwindow* window, int width, int height)
-{
+void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
     // make sure the viewport matches the new window dimensions; note that width and
     // height will be significantly larger than specified on retina displays.
     glViewport(0, 0, width, height);
 }
 
-
 // glfw: whenever the mouse moves, this callback is called
-// -------------------------------------------------------
-void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
-{
+void mouse_callback(GLFWwindow* window, double xposIn, double yposIn) {
     float xpos = static_cast<float>(xposIn);
     float ypos = static_cast<float>(yposIn);
-
-    if (firstMouse)
-    {
+    if (firstMouse) {
         lastX = xpos;
         lastY = ypos;
         firstMouse = false;
@@ -286,13 +172,10 @@ void mouse_callback(GLFWwindow* window, double xposIn, double yposIn)
 
     lastX = xpos;
     lastY = ypos;
-
     camera.ProcessMouseMovement(xoffset, yoffset);
 }
 
 // glfw: whenever the mouse scroll wheel scrolls, this callback is called
-// ----------------------------------------------------------------------
-void scroll_callback(GLFWwindow* window, double xoffset, double yoffset)
-{
+void scroll_callback(GLFWwindow* window, double xoffset, double yoffset) {
     camera.ProcessMouseScroll(static_cast<float>(yoffset));
 }
