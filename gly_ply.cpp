@@ -131,3 +131,8 @@ void Model_PLY::display(Shader &sh) {
         glBindVertexArray(0);
     }
 }
+
+
+void Model_PLY::move( int tiempo){
+
+}

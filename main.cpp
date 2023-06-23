@@ -10,7 +10,7 @@
 #include "Objecto.h"
 #include "gly_ply.h"
 #include <iostream>
-using namespace std;
+#include <fstream>
 
 void framebuffer_size_callback(GLFWwindow* window, int width, int height);
 void mouse_callback(GLFWwindow* window, double xpos, double ypos);
@@ -33,17 +33,17 @@ float lastFrame = 0.0f;
 float tiempoInicial = 0.0f, tiempoTranscurrido = 0.0f;
 
 // lighting
-glm::vec3 lightPos(1.2f, 1.0f, 2.0f);
+glm::vec3 lightPos(1.2f, 30.0f, 2.0f);
 
-
-
-//Esfera esfera(vec3(0),2., 100, 100);
-Objeto *pEsfera = new Esfera(vec3(0),2, 50, 50);
-
+Esfera esfera(vec3(0),2., 20, 20);
+Esfera *pEsfera = new Esfera(vec3(0),2, 50, 50);
 Model_PLY modelo;
+vector<Objeto*> objetos;
+bool boton_presionado = false;
+
 int main() {
-    char *archivo = "../resources/models/bunny.ply";
-    modelo.Load(archivo);
+    //char *archivo = "../models/bunny.ply";
+    //modelo.Load(archivo);
 
     // glfw: initialize and configure
     glfwInit();
@@ -56,8 +56,8 @@ int main() {
 #endif
 
     // glfw window creation
-    GLFWwindow* window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
-    if (window == NULL)     {
+    GLFWwindow *window = glfwCreateWindow(SCR_WIDTH, SCR_HEIGHT, "LearnOpenGL", NULL, NULL);
+    if (window == NULL) {
         std::cout << "Failed to create GLFW window" << std::endl;
         glfwTerminate();
         return -1;
@@ -70,7 +70,7 @@ int main() {
     glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
 
     // glad: load all OpenGL function pointers
-    if (!gladLoadGLLoader((GLADloadproc)glfwGetProcAddress))     {
+    if (!gladLoadGLLoader((GLADloadproc) glfwGetProcAddress)) {
         std::cout << "Failed to initialize GLAD" << std::endl;
         return -1;
     }
@@ -80,18 +80,61 @@ int main() {
 
     // build and compile our shader program
     Shader lightingShader("../resources/shaders/2.1.basic_lighting.vs", "../resources/shaders/2.1.basic_lighting.fs");
-    //Shader lightCubeShader("../2.2.light_cube.vs", "../2.2.light_cube.fs");
+    Shader lightCubeShader("../resources/shaders/2.1.light_cube.vs", "../resources/shaders/2.1.light_cube.fs");
 
-    //esfera.vao = esfera.setup();
-    pEsfera->setup();
-    modelo.setup();
+
+    vector<vec3> puntos;
+
+    ifstream file;
+    std::string segment;
+
+    file.open("../resources/models/points.csv");
+    string line;
+    stringstream test;
+    getline(file, line);
+    vec3 xyz;
+    vec3 normal_t;
+    while (getline(file, line)) {
+        test = stringstream(line);
+        int i = 0;
+        while ( getline(test, segment, ',')){
+            if (i==0){
+                xyz.x = stof(segment);
+            }else if (i == 1){
+                xyz.z = stof(segment);
+            }else if (i == 2){
+                xyz.y = stof(segment);
+            }
+            i++;
+        }
+        puntos.emplace_back(xyz);
+    }
+    file.close();
+
+  /*  for(float x=-10.0; x < 20.0; x += 0.1){
+        float y = 5*x*x + 3*x + 4;
+        puntos.emplace_back(vec3(x,y,0));
+    }*/
+    GLuint vao_puntos;
+    GLint POSITION_ATTRIBUTE=0;
+    glGenVertexArrays( 1, &vao_puntos );
+    glBindVertexArray( vao_puntos );
+    GLuint vbos[1];
+    glGenBuffers( 1, vbos );
+    glBindBuffer( GL_ARRAY_BUFFER, vbos[0] );
+    glBufferData( GL_ARRAY_BUFFER, puntos.size() * sizeof(vec3), puntos.data(), GL_STATIC_DRAW );
+    glVertexAttribPointer( POSITION_ATTRIBUTE, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
+    glEnableVertexAttribArray( POSITION_ATTRIBUTE );
+    glBindVertexArray( 0 );
+    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+
     // render loop
     while (!glfwWindowShouldClose(window)) {
         // per-frame time logic
         float currentFrame = static_cast<float>(glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
-        tiempoTranscurrido = currentFrame - tiempoInicial; //static_cast<float>(glfwGetTime());
+        //tiempoTranscurrido = currentFrame - tiempoInicial; //static_cast<float>(glfwGetTime());
         // input
         processInput(window);
 
@@ -117,9 +160,22 @@ int main() {
         lightingShader.setMat4("model", model);
 
         //esfera.display(lightingShader);
-        pEsfera->display(lightingShader);
-        modelo.display(lightingShader);
+        //pEsfera->display(lightingShader);
+        /*cout << endl << currentFrame;
+        for (auto &obj : objetos) {
+            obj->actualizarPosicion(currentFrame);
+            cout << "("<< obj->xt << "-" << obj->yt<<")";
+            obj->display(lightingShader);
+        }
+        modelo.display(lightingShader);*/
 
+        lightCubeShader.use();
+        lightCubeShader.setMat4("projection", projection);
+        lightCubeShader.setMat4("view", view);
+        lightCubeShader.setMat4("model", model);
+        glBindVertexArray(vao_puntos);
+        glDrawArrays(GL_POINTS,0, puntos.size());
+        glBindVertexArray(0);
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         glfwSwapBuffers(window);
         glfwPollEvents();
@@ -148,6 +204,13 @@ void processInput(GLFWwindow *window) {
         camera.ProcessKeyboard(LEFT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS){
+        boton_presionado = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE){
+
+    }
+
 }
 
 // glfw: whenever the window size changed (by OS or user resize) this callback function executes
