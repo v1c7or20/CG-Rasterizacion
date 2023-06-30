@@ -35,11 +35,7 @@ float tiempoInicial = 0.0f, tiempoTranscurrido = 0.0f;
 // lighting
 glm::vec3 lightPos(1.2f, 30.0f, 2.0f);
 
-Esfera esfera(vec3(0),2., 20, 20);
-Esfera *pEsfera = new Esfera(vec3(0),2, 50, 50);
-Model_PLY modelo;
-vector<Objeto*> objetos;
-bool boton_presionado = false;
+float mesh[2000000][6];
 
 int main() {
     //char *archivo = "../models/bunny.ply";
@@ -88,25 +84,40 @@ int main() {
     ifstream file;
     std::string segment;
 
-    file.open("../resources/models/points.csv");
+    file.open("../resources/models/mesh.csv");
     string line;
     stringstream test;
-    getline(file, line);
-    vec3 xyz;
+    vec3 xyz, normal;
     vec3 normal_t;
+    int mesh_i = 0;
     while (getline(file, line)) {
         test = stringstream(line);
         int i = 0;
         while ( getline(test, segment, ',')){
-            if (i==0){
+            mesh[mesh_i][i] = stof(segment);
+ /*           if (i==0){
                 xyz.x = stof(segment);
+//                mesh[mesh_i][0] = stof(segment);
             }else if (i == 1){
                 xyz.z = stof(segment);
+//                mesh[mesh_i][2] = stof(segment);
             }else if (i == 2){
                 xyz.y = stof(segment);
-            }
+//                mesh[mesh_i][1] = stof(segment);
+            }else if (i == 3){
+                normal.x = stof(segment);
+//                mesh[mesh_i][3] = stof(segment);
+            }else if (i == 4){
+                normal.z = stof(segment);
+//                mesh[mesh_i][5] = stof(segment);
+            }else if (i == 5){
+                normal.y = stof(segment);
+//                mesh[mesh_i][4] = stof(segment);
+            }*/
+
             i++;
         }
+        mesh_i++;
         puntos.emplace_back(xyz);
     }
     file.close();
@@ -115,18 +126,21 @@ int main() {
         float y = 5*x*x + 3*x + 4;
         puntos.emplace_back(vec3(x,y,0));
     }*/
-    GLuint vao_puntos;
-    GLint POSITION_ATTRIBUTE=0;
-    glGenVertexArrays( 1, &vao_puntos );
-    glBindVertexArray( vao_puntos );
-    GLuint vbos[1];
-    glGenBuffers( 1, vbos );
-    glBindBuffer( GL_ARRAY_BUFFER, vbos[0] );
-    glBufferData( GL_ARRAY_BUFFER, puntos.size() * sizeof(vec3), puntos.data(), GL_STATIC_DRAW );
-    glVertexAttribPointer( POSITION_ATTRIBUTE, 3, GL_FLOAT, GL_FALSE, 0, (void*)0);
-    glEnableVertexAttribArray( POSITION_ATTRIBUTE );
-    glBindVertexArray( 0 );
-    glBindBuffer( GL_ARRAY_BUFFER, 0 );
+    unsigned int VBO, cubeVAO;
+    glGenVertexArrays(1, &cubeVAO);
+    glGenBuffers(1, &VBO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, VBO);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(mesh), mesh, GL_STATIC_DRAW);
+
+    glBindVertexArray(cubeVAO);
+
+    // position attribute
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+    // normal attribute
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 6 * sizeof(float), (void*)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
 
     // render loop
     while (!glfwWindowShouldClose(window)) {
@@ -169,12 +183,9 @@ int main() {
         }
         modelo.display(lightingShader);*/
 
-        lightCubeShader.use();
-        lightCubeShader.setMat4("projection", projection);
-        lightCubeShader.setMat4("view", view);
-        lightCubeShader.setMat4("model", model);
-        glBindVertexArray(vao_puntos);
-        glDrawArrays(GL_POINTS,0, puntos.size());
+        glBindVertexArray(cubeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 2000000);
+
         glBindVertexArray(0);
         // glfw: swap buffers and poll IO events (keys pressed/released, mouse moved etc.)
         glfwSwapBuffers(window);
@@ -205,7 +216,6 @@ void processInput(GLFWwindow *window) {
     if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
         camera.ProcessKeyboard(RIGHT, deltaTime);
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS){
-        boton_presionado = true;
     }
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_RELEASE){
 
