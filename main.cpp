@@ -33,7 +33,7 @@ float lastFrame = 0.0f;
 float tiempoInicial = 0.0f, tiempoTranscurrido = 0.0f;
 
 // lighting
-glm::vec3 lightPos(1.2f, 30.0f, 2.0f);
+glm::vec3 lightPos(100.0f, 50.0f, 20.0f);
 
 float mesh[2000000][6];
 
